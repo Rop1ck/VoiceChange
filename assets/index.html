@@ -3,91 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Voice Anime Dubber</title>
+    <title>VoiceAnime AI - Batch Mode</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a2e; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background: #16213e; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 400px; text-align: center; }
-        h1 { color: #e94560; margin-bottom: 1.5rem; }
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: #16213e; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 450px; text-align: center; }
+        h1 { color: #e94560; }
         input, select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; background: #0f3460; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #e94560; border: none; color: white; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        button:hover { background: #ff4d6d; }
-        #status { margin-top: 15px; font-size: 0.9rem; color: #aaa; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #e94560; border-radius: 50%; width: 30px; height: 30px; animation: spin 2s linear infinite; display: none; margin: 10px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        button { width: 100%; padding: 12px; background: #e94560; border: none; color: white; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        #status { margin-top: 15px; font-size: 0.9rem; color: #aaa; white-space: pre-line; }
+        .progress-box { margin-top: 20px; text-align: left; background: #0f3460; padding: 10px; border-radius: 5px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>VoiceAnime AI</h1>
+    <h1>VoiceAnime AI 🚀</h1>
     
-    <label for="videoFile">Step 1: Select MP4 Video</label>
-    <input type="file" id="videoFile" accept="video/mp4">
+    <label>Step 1: Select MP4 Videos (Multiple possible)</label>
+    <input type="file" id="videoFiles" accept="video/mp4" multiple>
 
-    <label for="modelName">Step 2: Character Model Name</label>
-    <input type="text" id="modelName" placeholder="e.g. Goku (no .pth needed)">
+    <label>Step 2: Character Model Name</label>
+    <input type="text" id="modelName" placeholder="z.B. GokuBlack">
 
-    <label for="pitch">Step 3: Pitch Adjustment</label>
+    <label>Step 3: Pitch Adjustment</label>
     <select id="pitch">
-        <option value="-12">-12 (Deep/Male)</option>
+        <option value="-12">-12 (Deep)</option>
         <option value="0" selected>0 (Original)</option>
-        <option value="12">+12 (High/Female)</option>
+        <option value="12">+12 (High)</option>
     </select>
 
-    <button onclick="uploadVideo()">Generate AI Dub</button>
+    <button id="startBtn" onclick="processQueue()">Start Batch Processing</button>
 
-    <div class="loader" id="loader"></div>
-    <div id="status">Ready to process...</div>
+    <div class="progress-box" id="progressBox">
+        <strong>Queue Progress:</strong>
+        <div id="queueStatus">Waiting...</div>
+    </div>
+    <div id="status">Ready.</div>
 </div>
 
 <script>
-    async function uploadVideo() {
-        const fileInput = document.getElementById('videoFile');
-        const modelInput = document.getElementById('modelName');
-        const pitchInput = document.getElementById('pitch');
-        const status = document.getElementById('status');
-        const loader = document.getElementById('loader');
+    const GOBAL_URL = "DEINE_AKTUELLE_NGROK_URL"; // HIER URL EINTRAGEN
 
-        if (!fileInput.files[0] || !modelInput.value) {
-            alert("Please select a video and enter a model name!");
+    async function processQueue() {
+        const fileInput = document.getElementById('videoFiles');
+        const modelName = document.getElementById('modelName').value.trim();
+        const pitch = document.getElementById('pitch').value;
+        const status = document.getElementById('status');
+        const queueStatus = document.getElementById('queueStatus');
+        const progressBox = document.getElementById('progressBox');
+        const btn = document.getElementById('startBtn');
+
+        if (fileInput.files.length === 0 || !modelName) {
+            alert("Please select videos and enter a model name!");
             return;
         }
 
-        const formData = new FormData();
-        formData.append("video", fileInput.files[0]);
-        formData.append("model_name", modelInput.value);
-        formData.append("pitch", pitchInput.value);
+        btn.disabled = true;
+        progressBox.style.display = "block";
+        const files = Array.from(fileInput.files);
+        
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            queueStatus.innerText = `Processing (${i + 1}/${files.length}): ${file.name}`;
+            status.innerText = `Converting audio and applying AI...`;
 
-        status.innerText = "Processing... This will take a few minutes.";
-        loader.style.display = "block";
+            const formData = new FormData();
+            formData.append("video", file);
+            formData.append("model_name", modelName);
+            formData.append("pitch", pitch);
 
-        try {
-            const response = await fetch("Hier die URL eingeben/process-video/", {
-                method: "POST",
-                body: formData
-            });
+            try {
+                const response = await fetch(`${GOBAL_URL}/process-video/`, {
+                    method: "POST",
+                    body: formData
+                });
 
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `AI_Dub_${fileInput.files[0].name}`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                status.innerText = "Success! Download started.";
-            } else {
-                status.innerText = "Error during processing.";
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `AI_Dub_${file.name}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                } else {
+                    console.error("Error with file:", file.name);
+                }
+            } catch (error) {
+                console.error("Connection failed for:", file.name);
             }
-        } catch (error) {
-            console.error(error);
-            status.innerText = "Failed to connect to server.";
-        } finally {
-            loader.style.display = "none";
         }
+
+        queueStatus.innerText = "✅ All files processed!";
+        status.innerText = "Done.";
+        btn.disabled = false;
     }
 </script>
-
 </body>
 </html>
